@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clear Head</title>
+<meta name="theme-color" content="#24483E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Clear Head">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: nav rail | quick-add pad over the sorted list. Claude does the sorting; this is the viewer and checklist. */
+  --paper:#F2F4EE;
+  --surface:#FFFFFF;
+  --ink:#1B2320;
+  --muted:#5D6863;
+  --line:#DADFD6;
+  --accent:#24483E;
+  --accent-ink:#FFFFFF;
+  --mark:#F4E46A;
+  --mark-ink:#1B2320;
+  --urgent:#B0412D;
+  --wait:#8F6410;
+  --doing:#2C67A0;
+  --display:'Bricolage Grotesque','IBM Plex Sans Arabic',system-ui,sans-serif;
+  --body:'Atkinson Hyperlegible','IBM Plex Sans Arabic',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --r:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#111513; --surface:#19201C; --ink:#E6ECE7; --muted:#9AA59F; --line:#2A332E;
+    --accent:#98D6BE; --accent-ink:#0E1E18; --mark:#5A5321; --mark-ink:#F4EEC6;
+    --urgent:#F08B75; --wait:#E2B65C; --doing:#82B7E8; color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font:16px/1.5 var(--body);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hl{background:linear-gradient(transparent 56%,var(--mark) 56%,var(--mark) 90%,transparent 90%);padding:0 .08em}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Sign-in gate */
+.gate{min-height:100%;display:grid;place-items:center;padding:24px}
+.gate-card{max-width:380px;width:100%;display:flex;flex-direction:column;gap:16px;align-items:flex-start}
+.gate-card .brand{font-size:44px;padding:0}
+.gate-card p{margin:0;color:var(--muted);font-size:17px}
+.gate-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.app{display:grid;grid-template-columns:240px minmax(0,1fr);height:100%}
+
+/* Sidebar */
+.side{border-right:1px solid var(--line);padding:calc(22px + env(safe-area-inset-top)) 12px 18px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.brand{font:800 23px/1 var(--display);letter-spacing:-.02em;padding:0 10px}
+#nav{display:flex;flex-direction:column;gap:2px}
+.nav-label{font:700 11.5px/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:16px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:15px}
+.nav-item:hover{background:var(--surface)}
+.nav-item[aria-current="page"]{background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);font-weight:700}
+.nav-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.count{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+.nav-empty{color:var(--muted);font-size:14px;margin:0;padding:0 10px}
+#newAreaForm{display:flex;gap:6px;padding:0 4px}
+#newArea{flex:1;min-width:0;border:1px dashed var(--line);background:transparent;border-radius:8px;padding:7px 10px;font-size:14px}
+#newArea:focus{border-style:solid;border-color:var(--accent);outline:0}
+.account{margin-top:auto;padding:14px 10px 0;border-top:1px solid var(--line);font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px;overflow-wrap:anywhere}
+.linkbtn{all:unset;cursor:pointer;color:var(--ink);text-decoration:underline;text-underline-offset:3px;font-size:13px;align-self:flex-start}
+.linkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sync{display:inline-flex;align-items:center;gap:6px}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:#4CA37E}
+.sync.off::before{background:var(--wait)}
+
+/* Main */
+.main{overflow:auto;padding:calc(28px + env(safe-area-inset-top)) clamp(16px,3.2vw,44px) calc(70px + env(safe-area-inset-bottom))}
+.inner{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.quick{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px 12px;box-shadow:0 14px 34px -26px rgba(15,30,24,.45);transition:border-color .2s}
+.quick:focus-within{border-color:var(--accent)}
+.quick-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.quick-label{font:700 12px/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.tip{font-size:13px;color:var(--muted)}
+#quickText{display:block;width:100%;min-height:60px;resize:vertical;border:0;outline:0;margin:8px 0 0;padding:0 2px;background:transparent;color:var(--ink);font:17px/30px var(--body);background-image:repeating-linear-gradient(to bottom,transparent 0 29px,var(--line) 29px 30px);background-attachment:local}
+#quickText::placeholder{color:var(--muted)}
+.quick-actions{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 15px;font-size:14.5px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700;padding:9px 20px}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.5;cursor:default;filter:none}
+.btn.ghost{background:transparent}
+.btn.on{background:var(--mark);color:var(--mark-ink);border-color:transparent;font-weight:700}
+.btn.danger{color:var(--urgent)}
+.banner{border:1px solid var(--wait);background:var(--surface);border-radius:var(--r);padding:10px 14px;font-size:14.5px}
+
+/* View */
+.view-head{display:flex;flex-direction:column;gap:6px}
+.vh-row{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.view-head h1{margin:0;font:800 clamp(30px,4vw,42px)/1.05 var(--display);letter-spacing:-.025em;text-wrap:balance}
+.view-head p{margin:0;color:var(--muted);font-size:15px;max-width:62ch}
+.vh-tools{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+#areaName{font:800 28px/1.1 var(--display);border:0;border-bottom:2px solid var(--accent);background:transparent;outline:0;min-width:0;width:min(420px,100%)}
+#list{display:flex;flex-direction:column;gap:26px}
+.group{display:flex;flex-direction:column;gap:8px}
+.group-title{margin:0 0 2px;font:700 15px/1.2 var(--display);display:flex;align-items:center;gap:8px}
+.group-title .count{font-family:var(--body);font-weight:400}
+
+.task{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.task.is-urgent{box-shadow:inset 3px 0 0 var(--urgent)}
+.task.is-open{border-color:var(--accent);border-bottom-left-radius:0;border-bottom-right-radius:0}
+.check{width:24px;height:24px;border-radius:50%;border:2px solid var(--muted);background:transparent;flex:none;margin-top:0;display:grid;place-items:center;cursor:pointer;color:transparent;padding:0;transition:background .15s,border-color .15s}
+.check:hover{border-color:var(--accent);color:var(--accent)}
+.check svg{width:12px;height:12px}
+.is-done .check{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.t-body{all:unset;flex:1;min-width:0;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.t-body:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}
+.t-title{font-size:16.5px;overflow-wrap:anywhere}
+.is-done .t-title{text-decoration:line-through;color:var(--muted)}
+.t-note{font-size:13.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;line-height:1.5;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.chip.today{background:var(--mark);color:var(--mark-ink);border-color:transparent;font-weight:700}
+.chip.urgent{color:var(--urgent);border-color:currentColor;font-weight:700}
+.chip.doing{color:var(--doing);border-color:currentColor}
+.chip.wait{color:var(--wait);border-color:currentColor}
+.chip.due.over{color:var(--urgent);border-color:currentColor}
+.chip.due.soon{color:var(--ink);border-color:var(--muted)}
+.chip .dot{width:7px;height:7px}
+
+.editor{background:var(--surface);border:1px solid var(--accent);border-top:0;border-radius:0 0 var(--r) var(--r);margin-top:-9px;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f>span{font-size:12.5px;color:var(--muted);font-weight:700}
+.f.wide{grid-column:1/-1}
+.f input,.f select,.f textarea{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:7px 10px;font-size:16px;width:100%}
+.f textarea{resize:vertical;line-height:1.45}
+.f input:focus,.f select:focus,.f textarea:focus{outline:0;border-color:var(--accent)}
+.ed-actions{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+.note{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.note p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.note-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.note-meta .btn{padding:4px 11px;font-size:13px}
+
+.empty{border:1px dashed var(--line);border-radius:14px;padding:26px 22px}
+.empty h3{margin:0 0 6px;font:700 20px/1.2 var(--display)}
+.empty p{margin:0;color:var(--muted);max-width:60ch}
+.loading{color:var(--muted)}
+
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-size:14.5px;box-shadow:0 10px 30px -12px rgba(0,0,0,.5);z-index:10;max-width:calc(100% - 32px)}
+
+@media (max-width:860px){
+  html,body{height:auto}
+  .app{display:block;height:auto}
+  .side{border-right:0;border-bottom:1px solid var(--line);padding:calc(14px + env(safe-area-inset-top)) 16px 12px;gap:10px;overflow:visible;position:sticky;top:0;background:var(--paper);z-index:5}
+  .brand{padding:0}
+  #nav{flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px;scrollbar-width:none}
+  #nav::-webkit-scrollbar{display:none}
+  .nav-label,.nav-empty{display:none}
+  .nav-item{white-space:nowrap;border:1px solid var(--line);flex:none}
+  .side-extra{display:none}
+  .main{overflow:visible;padding:18px 16px calc(40px + env(safe-area-inset-bottom))}
+  .mobile-only{display:flex !important}
+}
+.mobile-only{display:none !important}
+.foot{display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line);padding-top:18px;font-size:13px;color:var(--muted)}
+.foot form{display:flex;gap:6px;max-width:340px}
+.foot input{flex:1;min-width:0;border:1px dashed var(--line);background:transparent;border-radius:8px;padding:7px 10px;font-size:16px}
+@media (max-width:560px){ .editor{grid-template-columns:1fr} }
+@media (prefers-reduced-motion: reduce){ *{animation:none !important;transition:none !important} }
+</style>
+</head>
+<body>
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="brand"><span class="hl">Clear</span> Head</div>
+    <p id="gateMsg">Loading…</p>
+    <div class="gate-actions">
+      <button type="button" class="btn primary" id="signInBtn" hidden>Sign in with Google</button>
+      <button type="button" class="btn ghost" id="gateSignOut" hidden>Use a different account</button>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="app" hidden>
+  <aside class="side" aria-label="Lists">
+    <div class="brand"><span class="hl">Clear</span> Head</div>
+    <nav id="nav"></nav>
+    <div class="side-extra">
+      <form id="newAreaForm" autocomplete="off">
+        <label for="newArea" class="vh">New area name</label>
+        <input id="newArea" placeholder="+ New area" maxlength="60" dir="auto">
+      </form>
+    </div>
+    <div class="account side-extra">
+      <span class="sync" id="syncState">Synced</span>
+      <span id="whoAmI"></span>
+      <button type="button" class="linkbtn" id="signOutBtn">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="inner">
+      <section class="quick" aria-label="Quick add">
+        <div class="quick-top">
+          <label class="quick-label" for="quickText">Quick add</label>
+          <span class="tip">One task per line. Ctrl + Enter to add.</span>
+        </div>
+        <textarea id="quickText" dir="auto" rows="2" placeholder="Type a task. One per line for several."></textarea>
+        <div class="quick-actions">
+          <span class="sp"></span>
+          <button type="button" class="btn primary" id="addBtn" disabled>Add to Inbox</button>
+        </div>
+      </section>
+
+      <div class="banner" id="banner" hidden></div>
+      <header class="view-head" id="viewHead"></header>
+      <div id="list"></div>
+
+      <footer class="foot mobile-only">
+        <form id="newAreaFormM" autocomplete="off">
+          <label for="newAreaM" class="vh">New area name</label>
+          <input id="newAreaM" placeholder="+ New area" maxlength="60" dir="auto">
+        </form>
+        <span><span class="sync" id="syncStateM">Synced</span> · <span id="whoAmIM"></span> · <button type="button" class="linkbtn" id="signOutBtnM">Sign out</button></span>
+      </footer>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCHlqZX_X2hzTjunqODchIrDEkYoX1cZNw",
+  authDomain: "clear-head-10cc1.firebaseapp.com",
+  projectId: "clear-head-10cc1",
+  storageBucket: "clear-head-10cc1.firebasestorage.app",
+  messagingSenderId: "42953647219",
+  appId: "1:42953647219:web:3756da2c7f42a7e6a3b606"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+let db;
+try { db = initializeFirestore(fbApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+catch (e) { console.warn("Offline cache unavailable", e); db = initializeFirestore(fbApp, {}); }
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const HUES = ["#3E8A72","#C0663F","#5A72C0","#A8832F","#9161AE","#3F8FAE","#7F9238","#BF5B83"];
+const STATUS = { todo: "To do", doing: "In progress", waiting: "Waiting on someone", done: "Done" };
+const PRIOS = [["high","Urgent"],["normal","Normal"],["low","Can wait"]];
+const VIEWS = ["today","inbox","all","notes","done"];
+const STARTER_AREAS = [["awork","Work",0,1],["astudies","Studies",2,2],["aresearch","Research",3,3],["ahome","Home",5,4]];
+const DRAFT_KEY = "clearhead-quick-draft";
+
+const S = {
+  user: null, unsubs: [], areas: [], tasks: [], notes: [],
+  loaded: { areas: false, tasks: false, notes: false }, seeded: false, offline: false,
+  view: "today", open: null, confirmDel: null, renaming: false, confirmAreaDel: false,
+  pd: false, pending: false
+};
+
+/* ---------- helpers ---------- */
+const dstr = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+function todayStr(off = 0){ const d = new Date(); d.setDate(d.getDate() + off); return dstr(d); }
+function fmtDate(due){ const [y,m,d] = due.split("-").map(Number); return new Date(y, m-1, d).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }); }
+function dueLabel(due){
+  if (!due) return null;
+  const t = todayStr();
+  if (due < t) return { cls: "over", txt: "Overdue · " + fmtDate(due) };
+  if (due === t) return { cls: "soon", txt: "Due today" };
+  if (due === todayStr(1)) return { cls: "soon", txt: "Due tomorrow" };
+  return { cls: "", txt: "Due " + fmtDate(due) };
+}
+const areaById = id => id ? S.areas.find(a => a.id === id) : undefined;
+const hue = a => HUES[(Number(a && a.hue) || 0) % HUES.length];
+const sortedAreas = () => [...S.areas].sort((a,b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name).localeCompare(String(b.name)));
+const openTasks = () => S.tasks.filter(t => t.status !== "done");
+const inInbox = t => !areaById(t.area);
+function taskSort(a, b){
+  const pr = { high: 0, normal: 1, low: 2 }, st = { doing: 0, todo: 1, waiting: 2 };
+  return (pr[a.priority] ?? 1) - (pr[b.priority] ?? 1) || (st[a.status] ?? 1) - (st[b.status] ?? 1) || (a.createdAt || 0) - (b.createdAt || 0);
+}
+const firstLine = s => String(s || "").split("\n").find(l => l.trim()) || "";
+const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+function makeTask(f){
+  return {
+    title: String(f.title || "").trim().slice(0, 300) || "Untitled",
+    area: f.area && areaById(f.area) ? f.area : "",
+    project: String(f.project || "").trim().slice(0, 80),
+    priority: ["high","normal","low"].includes(f.priority) ? f.priority : "normal",
+    status: "todo", note: String(f.note || "").slice(0, 3000), due: "",
+    today: false, createdAt: Date.now(), doneAt: 0
+  };
+}
+let toastTimer;
+function toast(msg){ const el = $("#toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3600); }
+function banner(msg){ const b = $("#banner"); if (msg){ b.textContent = msg; b.hidden = false; } else b.hidden = true; }
+
+/* ---------- store ---------- */
+// Writes apply locally at once (and sync later if offline), so most calls aren't awaited.
+async function write(kind, coll, id, data){
+  try {
+    const ref = doc(db, coll, id);
+    if (kind === "set") await setDoc(ref, data);
+    else if (kind === "update") await updateDoc(ref, data);
+    else await deleteDoc(ref);
+    return true;
+  } catch (e){
+    console.error(e);
+    toast(e && e.code === "permission-denied" ? "This account isn't allowed to change the list." : "Couldn't save that change. Try again.");
+    return false;
+  }
+}
+function setStatus(t, status){
+  return write("update", "tasks", t.id, { status, doneAt: status === "done" ? Date.now() : 0, today: status === "done" ? false : !!t.today });
+}
+
+function unsubscribeAll(){ S.unsubs.forEach(u => { try { u(); } catch(_){} }); S.unsubs = []; }
+function subscribe(){
+  unsubscribeAll();
+  S.loaded = { areas: false, tasks: false, notes: false };
+  S.server = { areas: false, tasks: false, notes: false };
+  const timer = setTimeout(() => {
+    S.loaded = { areas: true, tasks: true, notes: true }; render();
+    if (!(S.server.areas && S.server.tasks && S.server.notes)) banner("Can't reach your list right now. Showing what's saved on this device; changes will sync when you're back online.");
+  }, 10000);
+  ["areas","tasks","notes"].forEach(c => {
+    const u = onSnapshot(collection(db, c), { includeMetadataChanges: true }, snap => {
+      S[c] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      S.offline = snap.metadata.fromCache;
+      updateSync(snap.metadata.hasPendingWrites);
+      if (!snap.metadata.fromCache && !S.server[c]){
+        S.server[c] = true; S.loaded[c] = true;
+        if (S.server.areas && S.server.tasks && S.server.notes){ clearTimeout(timer); banner(null); }
+        if (c === "areas" && snap.empty) seedAreas();
+      }
+      if (snap.metadata.fromCache && snap.size) S.loaded[c] = true;
+      render();
+    }, err => {
+      clearTimeout(timer);
+      console.error(err);
+      if (err.code === "permission-denied") return denied();
+      S.loaded[c] = true;
+      banner("Part of your list couldn't load. Reopen the app to try again.");
+      render();
+    });
+    S.unsubs.push(u);
+  });
+}
+function updateSync(pending){
+  const off = S.offline || !navigator.onLine;
+  const txt = off ? "Offline: changes saved on this device" : pending ? "Saving…" : "Synced";
+  ["#syncState","#syncStateM"].forEach(id => { const el = $(id); el.textContent = txt; el.classList.toggle("off", off || pending); });
+}
+addEventListener("online", () => updateSync(false));
+addEventListener("offline", () => updateSync(false));
+
+async function seedAreas(){
+  if (S.seeded) return; S.seeded = true;
+  const b = writeBatch(db);
+  STARTER_AREAS.forEach(([id, name, h, order]) => b.set(doc(db, "areas", id), { name, hue: h, order }));
+  try { await b.commit(); } catch (e){ console.error(e); }
+}
+
+/* ---------- auth ---------- */
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: "select_account" });
+getRedirectResult(auth).catch(e => { console.error(e); showGate("Sign-in didn't finish. Try again."); });
+
+$("#signInBtn").addEventListener("click", async () => {
+  try { await signInWithPopup(auth, provider); }
+  catch (e){
+    if (["auth/popup-blocked","auth/operation-not-supported-in-this-environment","auth/web-storage-unsupported"].includes(e.code)){
+      try { await signInWithRedirect(auth, provider); } catch (e2){ console.error(e2); showGate("Sign-in didn't work here. Try opening the app in your browser."); }
+    } else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request"){
+      console.error(e); showGate("Sign-in didn't work. Check your connection and try again.");
+    }
+  }
+});
+const doSignOut = async () => { unsubscribeAll(); S.areas = []; S.tasks = []; S.notes = []; await signOut(auth); };
+$("#signOutBtn").addEventListener("click", doSignOut);
+$("#signOutBtnM").addEventListener("click", doSignOut);
+$("#gateSignOut").addEventListener("click", doSignOut);
+
+function showGate(msg, wrongAccount = false){
+  $("#app").hidden = true; $("#gate").hidden = false;
+  $("#gateMsg").textContent = msg;
+  $("#signInBtn").hidden = wrongAccount;
+  $("#gateSignOut").hidden = !wrongAccount;
+}
+function denied(){
+  unsubscribeAll();
+  showGate(`${S.user ? S.user.email : "This account"} doesn't have access to this list. Sign in with the account the app was set up for.`, true);
+}
+
+onAuthStateChanged(auth, user => {
+  S.user = user;
+  if (!user){ unsubscribeAll(); showGate("Your list of tasks, sorted by Claude. Sign in to open it."); return; }
+  $("#gate").hidden = true; $("#app").hidden = false;
+  $("#whoAmI").textContent = user.email || "";
+  $("#whoAmIM").textContent = user.email || "";
+  route(); render(); subscribe();
+});
+
+/* ---------- rendering ---------- */
+function render(){
+  if (S.pd){ S.pending = true; return; }
+  if ($("#app").hidden) return;
+  const ae = document.activeElement;
+  const fid = ae && ae.id && $("#list").contains(ae) || (ae && ae.id === "areaName") ? ae.id : null;
+  let val = null, sel = null;
+  if (fid && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")){ val = ae.value; try { sel = [ae.selectionStart, ae.selectionEnd]; } catch(_){} }
+  renderNav(); renderView(); updateAddBtn();
+  if (fid){
+    const el = document.getElementById(fid);
+    if (el && el !== document.activeElement){
+      if (val !== null) el.value = val;
+      el.focus({ preventScroll: true });
+      try { if (sel && el.setSelectionRange) el.setSelectionRange(sel[0], sel[1]); } catch(_){}
+    }
+  }
+}
+function navItem(v, label, count, a){
+  const cur = S.view === v ? ' aria-current="page"' : "";
+  return `<a href="#${v}" class="nav-item"${cur}>${a ? `<span class="dot" style="background:${hue(a)}"></span>` : ""}<span class="nav-name" dir="auto">${esc(label)}</span>${count ? `<span class="count">${count}</span>` : ""}</a>`;
+}
+function renderNav(){
+  const open = openTasks();
+  let h = navItem("today", "Today", open.filter(t => t.today).length)
+        + navItem("inbox", "Inbox", open.filter(inInbox).length)
+        + navItem("all", "Everything", open.length)
+        + `<div class="nav-label">Areas</div>`;
+  const areas = sortedAreas();
+  h += areas.length ? areas.map(a => navItem("area-" + a.id, a.name, open.filter(t => t.area === a.id).length, a)).join("") : `<p class="nav-empty">No areas yet.</p>`;
+  h += `<div class="nav-label">More</div>` + navItem("notes", "Notes", S.notes.length) + navItem("done", "Done", 0);
+  $("#nav").innerHTML = h;
+  const cur = $("#nav [aria-current]");
+  if (cur && matchMedia("(max-width:860px)").matches) cur.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+const CHECK = `<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.2 6.4 4.8 9 9.8 3.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+function taskRow(t, o = {}){
+  const a = areaById(t.area), done = t.status === "done", open = S.open === t.id;
+  const chips = [];
+  if (t.today && !done) chips.push(`<span class="chip today">Today</span>`);
+  if (t.priority === "high" && !done) chips.push(`<span class="chip urgent">Urgent</span>`);
+  if (t.priority === "low" && !done) chips.push(`<span class="chip">Can wait</span>`);
+  if (t.status === "doing") chips.push(`<span class="chip doing">In progress</span>`);
+  if (t.status === "waiting") chips.push(`<span class="chip wait">Waiting</span>`);
+  const dl = dueLabel(t.due); if (dl && !done) chips.push(`<span class="chip due ${dl.cls}">${esc(dl.txt)}</span>`);
+  if (o.area && a) chips.push(`<span class="chip"><span class="dot" style="background:${hue(a)}"></span><span dir="auto">${esc(a.name)}</span></span>`);
+  if (o.project && t.project) chips.push(`<span class="chip" dir="auto">${esc(t.project)}</span>`);
+  return `<div class="task${t.priority === "high" && !done ? " is-urgent" : ""}${done ? " is-done" : ""}${open ? " is-open" : ""}" data-id="${esc(t.id)}">
+    <button type="button" class="check" data-act="toggle" aria-label="${done ? "Mark not done" : "Mark done"}: ${esc(t.title)}" aria-pressed="${done}">${CHECK}</button>
+    <button type="button" class="t-body" data-act="open" aria-expanded="${open}" id="row-${esc(t.id)}">
+      <span class="t-title" dir="auto">${esc(t.title || "Untitled")}</span>
+      ${t.note ? `<span class="t-note" dir="auto">${esc(firstLine(t.note))}</span>` : ""}
+      ${chips.length ? `<span class="chips">${chips.join("")}</span>` : ""}
+    </button>
+  </div>${open ? editor(t) : ""}`;
+}
+function editor(t){
+  const projects = [...new Set(S.tasks.filter(x => x.area === t.area && x.project).map(x => x.project))];
+  const areaOpts = `<option value="">Inbox (no area)</option>` + sortedAreas().map(a => `<option value="${esc(a.id)}"${a.id === t.area ? " selected" : ""}>${esc(a.name)}</option>`).join("");
+  return `<div class="editor" data-id="${esc(t.id)}">
+    <label class="f wide"><span>Task</span><input id="ed-title" data-f="title" dir="auto" maxlength="300" value="${esc(t.title)}"></label>
+    <label class="f wide"><span>Progress notes</span><textarea id="ed-note" data-f="note" dir="auto" rows="3" placeholder="Where you left off, who you're waiting on, numbers, links">${esc(t.note)}</textarea></label>
+    <label class="f"><span>Area</span><select id="ed-area" data-f="area">${areaOpts}</select></label>
+    <label class="f"><span>Project</span><input id="ed-project" data-f="project" list="ed-projects" dir="auto" maxlength="80" value="${esc(t.project)}" placeholder="Optional"><datalist id="ed-projects">${projects.map(p => `<option value="${esc(p)}"></option>`).join("")}</datalist></label>
+    <label class="f"><span>Status</span><select id="ed-status" data-f="status">${Object.entries(STATUS).map(([k,v]) => `<option value="${k}"${k === t.status ? " selected" : ""}>${v}</option>`).join("")}</select></label>
+    <label class="f"><span>Priority</span><select id="ed-prio" data-f="priority">${PRIOS.map(([k,v]) => `<option value="${k}"${k === t.priority ? " selected" : ""}>${v}</option>`).join("")}</select></label>
+    <label class="f"><span>Due date, if there is one</span><input type="date" id="ed-due" data-f="due" value="${esc(t.due)}"></label>
+    <div class="ed-actions">
+      <button type="button" class="btn${t.today ? " on" : ""}" data-act="today" id="ed-today" aria-pressed="${!!t.today}">${t.today ? "Picked for today" : "Pick for today"}</button>
+      <span class="sp"></span>
+      <button type="button" class="btn ghost danger" data-act="delete" id="ed-del">${S.confirmDel === t.id ? "Tap again to delete" : "Delete"}</button>
+      <button type="button" class="btn" data-act="close" id="ed-close">Close</button>
+    </div>
+  </div>`;
+}
+function group(titleHtml, tasks, o){
+  if (!tasks.length) return "";
+  return `<section class="group">${titleHtml ? `<h3 class="group-title">${titleHtml}<span class="count">${tasks.length}</span></h3>` : ""}${tasks.map(t => taskRow(t, o)).join("")}</section>`;
+}
+const empty = (h, p) => `<div class="empty"><h3>${h}</h3><p>${p}</p></div>`;
+
+function renderView(){
+  const v = S.view;
+  let title = "", sub = "", tools = "", body = "";
+  const open = openTasks().sort(taskSort);
+  const loading = !S.loaded.tasks;
+
+  if (v === "today"){
+    title = `<span class="hl">Today</span>`;
+    sub = "What you picked for today, plus anything you gave a due date in the next three days.";
+    const picked = open.filter(t => t.today);
+    const lim = todayStr(3);
+    const soon = open.filter(t => !t.today && t.due && t.due <= lim).sort((a,b) => a.due.localeCompare(b.due));
+    body = group("Picked for today", picked, { area: 1, project: 1 }) + group("Coming up", soon, { area: 1, project: 1 });
+    if (!body) body = empty("Nothing picked yet", "Open any task and choose <b>Pick for today</b>. Only you decide what goes on this list.");
+  } else if (v === "inbox"){
+    title = "Inbox"; sub = "Tasks that aren't in an area yet. Open one to give it a home.";
+    body = group("", open.filter(inInbox), { project: 1 }) || empty("Inbox is clear", "Quick-added tasks, and anything Claude can't place, land here.");
+  } else if (v === "all"){
+    title = "Everything";
+    sub = `${plural(open.length, "open task")} across ${plural(S.areas.length, "area")}.`;
+    body = group("Inbox", open.filter(inInbox), { project: 1 })
+         + sortedAreas().map(a => group(`<span class="dot" style="background:${hue(a)}"></span><span dir="auto">${esc(a.name)}</span>`, open.filter(t => t.area === a.id), { project: 1 })).join("");
+    if (!body) body = empty("No tasks yet", "Add a few with Quick add above, or send a brain dump to Claude once the connector is set up.");
+  } else if (v.startsWith("area-")){
+    const a = areaById(v.slice(5));
+    if (!a){
+      title = "Area not found";
+      body = S.loaded.areas ? empty("This area doesn't exist anymore", `It may have been deleted. <a href="#all">See everything</a>.`) : "";
+    } else {
+      const ts = open.filter(t => t.area === a.id);
+      title = S.renaming ? `<input id="areaName" dir="auto" maxlength="60" value="${esc(a.name)}" aria-label="Area name">` : `<span dir="auto">${esc(a.name)}</span>`;
+      sub = plural(ts.length, "open task");
+      tools = S.renaming
+        ? `<button type="button" class="btn primary" data-act="area-save">Save name</button><button type="button" class="btn ghost" data-act="area-cancel">Cancel</button>`
+        : `<button type="button" class="btn ghost" data-act="area-rename">Rename</button><button type="button" class="btn ghost danger" data-act="area-del">${S.confirmAreaDel ? "Tap again: tasks move to Inbox" : "Delete area"}</button>`;
+      const loose = ts.filter(t => !t.project);
+      const projects = [...new Set(ts.filter(t => t.project).map(t => t.project))].sort((x,y) => x.localeCompare(y));
+      body = group(projects.length ? "Loose tasks" : "", loose, {}) + projects.map(p => group(`<span dir="auto">${esc(p)}</span>`, ts.filter(t => t.project === p), {})).join("");
+      if (!body) body = empty("Nothing here yet", "Tasks you file in this area will show here, grouped by project.");
+    }
+  } else if (v === "notes"){
+    title = "Notes"; sub = "Thoughts from your dumps that aren't tasks. Turn one into a task whenever it becomes one.";
+    const ns = [...S.notes].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+    body = ns.length ? `<section class="group">${ns.map(n => {
+      const a = areaById(n.area);
+      return `<div class="note" data-id="${esc(n.id)}"><p dir="auto">${esc(n.text)}</p><div class="note-meta">${a ? `<span class="chip"><span class="dot" style="background:${hue(a)}"></span>${esc(a.name)}</span>` : ""}<span>${n.createdAt ? new Date(n.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : ""}</span><span class="sp"></span><button type="button" class="btn" data-act="note-task">Make it a task</button><button type="button" class="btn ghost danger" data-act="note-del">${S.confirmDel === n.id ? "Tap again" : "Delete"}</button></div></div>`;
+    }).join("")}</section>` : empty("No notes yet", "When a brain dump has ideas or feelings rather than actions, Claude keeps them here.");
+  } else if (v === "done"){
+    title = "Done"; sub = "Finished tasks, newest first. Tick one again to bring it back.";
+    const ds = S.tasks.filter(t => t.status === "done").sort((a,b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 200);
+    body = group("", ds, { area: 1, project: 1 }) || empty("Nothing finished yet", "Ticked-off tasks collect here.");
+  }
+  if (loading) body = `<p class="loading">Loading your list…</p>`;
+  $("#viewHead").innerHTML = `<div class="vh-row"><h1>${title}</h1>${tools ? `<div class="vh-tools">${tools}</div>` : ""}</div>${sub ? `<p>${sub}</p>` : ""}`;
+  $("#list").innerHTML = body;
+}
+
+/* ---------- interactions ---------- */
+document.addEventListener("pointerdown", () => { S.pd = true; }, true);
+const release = () => { S.pd = false; if (S.pending){ S.pending = false; setTimeout(render, 0); } };
+document.addEventListener("pointerup", release, true);
+document.addEventListener("pointercancel", release, true);
+
+$("#main").addEventListener("click", async e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const host = b.closest("[data-id]"); const id = host ? host.dataset.id : null;
+  const t = id ? S.tasks.find(x => x.id === id) : null;
+  const act = b.dataset.act;
+  if (act === "toggle" && t){ const wasDone = t.status === "done"; setStatus(t, wasDone ? "todo" : "done"); if (!wasDone) toast("Done: " + t.title); }
+  else if (act === "open"){ S.open = S.open === id ? null : id; S.confirmDel = null; render(); }
+  else if (act === "today" && t){ write("update", "tasks", id, { today: !t.today }); }
+  else if (act === "delete" && t){
+    if (S.confirmDel === id){ S.open = null; S.confirmDel = null; write("delete", "tasks", id); toast("Task deleted"); }
+    else { S.confirmDel = id; render(); }
+  }
+  else if (act === "close"){ S.open = null; S.confirmDel = null; render(); document.getElementById("row-" + id)?.focus(); }
+  else if (act === "note-del"){
+    if (S.confirmDel === id){ S.confirmDel = null; write("delete", "notes", id); }
+    else { S.confirmDel = id; render(); }
+  }
+  else if (act === "note-task"){
+    const n = S.notes.find(x => x.id === id); if (!n) return;
+    const text = String(n.text || "").trim();
+    write("set", "tasks", newId("t"), makeTask({ title: text.length > 140 ? text.slice(0, 137) + "…" : text, note: text.length > 140 ? text : "", area: n.area }));
+    write("delete", "notes", id); toast("Moved to your tasks");
+  }
+  else if (act === "area-rename"){ S.renaming = true; S.confirmAreaDel = false; render(); const i = $("#areaName"); if (i){ i.focus(); i.select(); } }
+  else if (act === "area-cancel"){ S.renaming = false; render(); }
+  else if (act === "area-save"){ saveAreaName(); }
+  else if (act === "area-del"){
+    const a = areaById(S.view.slice(5)); if (!a) return;
+    if (!S.confirmAreaDel){ S.confirmAreaDel = true; render(); return; }
+    S.confirmAreaDel = false;
+    const batch = writeBatch(db);
+    S.tasks.filter(x => x.area === a.id).forEach(x => batch.update(doc(db, "tasks", x.id), { area: "", project: "" }));
+    S.notes.filter(x => x.area === a.id).forEach(x => batch.update(doc(db, "notes", x.id), { area: "" }));
+    batch.delete(doc(db, "areas", a.id));
+    batch.commit().catch(err => { console.error(err); toast("Couldn't delete the area. Try again."); });
+    location.hash = "all"; toast("Area deleted. Its tasks are in Inbox.");
+  }
+});
+function saveAreaName(){
+  const a = areaById(S.view.slice(5)); const i = $("#areaName");
+  if (!a || !i) return;
+  const name = i.value.trim().slice(0, 60);
+  S.renaming = false;
+  if (name && name !== a.name) write("update", "areas", a.id, { name });
+  render();
+}
+$("#main").addEventListener("keydown", e => {
+  if (e.target.id === "areaName"){ if (e.key === "Enter"){ e.preventDefault(); saveAreaName(); } if (e.key === "Escape"){ S.renaming = false; render(); } }
+  if (e.target.id === "ed-title" && e.key === "Enter"){ e.preventDefault(); e.target.blur(); }
+});
+$("#list").addEventListener("change", e => {
+  const el = e.target.closest("[data-f]"); if (!el) return;
+  const id = el.closest(".editor")?.dataset.id; const t = S.tasks.find(x => x.id === id); if (!t) return;
+  const f = el.dataset.f; let v = el.value;
+  if (f === "title"){ v = v.trim().slice(0, 300); if (!v){ el.value = t.title; return; } }
+  if (f === "project") v = v.trim().slice(0, 80);
+  if (f === "note") v = v.slice(0, 3000);
+  if (v === (t[f] ?? "")) return;
+  if (f === "status") setStatus(t, v);
+  else if (f === "area") write("update", "tasks", id, { area: v, project: "" });
+  else write("update", "tasks", id, { [f]: v });
+});
+
+/* new area (sidebar on desktop, footer on phone) */
+function addArea(inp){
+  const name = inp.value.trim().slice(0, 60); if (!name) return;
+  const id = newId("a");
+  const used = S.areas.map(a => Number(a.hue) || 0);
+  let h = HUES.findIndex((_, i) => !used.includes(i)); if (h < 0) h = S.areas.length % HUES.length;
+  write("set", "areas", id, { name, hue: h, order: Math.max(0, ...S.areas.map(a => a.order || 0)) + 1 });
+  inp.value = ""; location.hash = "area-" + id;
+}
+$("#newAreaForm").addEventListener("submit", e => { e.preventDefault(); addArea($("#newArea")); });
+$("#newAreaFormM").addEventListener("submit", e => { e.preventDefault(); addArea($("#newAreaM")); });
+
+/* quick add */
+const quick = $("#quickText");
+function targetArea(){ return S.view.startsWith("area-") ? areaById(S.view.slice(5)) : null; }
+function updateAddBtn(){
+  const a = targetArea();
+  const n = quick.value.split("\n").filter(l => l.trim()).length;
+  const btn = $("#addBtn");
+  btn.disabled = n === 0;
+  btn.textContent = (n > 1 ? `Add ${n} to ` : "Add to ") + (a ? a.name : "Inbox");
+}
+try { const d = localStorage.getItem(DRAFT_KEY); if (d) quick.value = d; } catch(_){}
+let draftT;
+quick.addEventListener("input", () => { updateAddBtn(); clearTimeout(draftT); draftT = setTimeout(() => { try { localStorage.setItem(DRAFT_KEY, quick.value); } catch(_){} }, 400); });
+quick.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)){ e.preventDefault(); $("#addBtn").click(); } });
+$("#addBtn").addEventListener("click", () => {
+  const lines = quick.value.split("\n").map(l => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim()).filter(Boolean);
+  if (!lines.length) return;
+  const a = targetArea();
+  const batch = writeBatch(db);
+  lines.forEach((l, i) => { const t = makeTask({ title: l, area: a ? a.id : "" }); t.createdAt += i; batch.set(doc(db, "tasks", newId("t")), t); });
+  batch.commit().catch(err => { console.error(err); toast("Couldn't save those tasks. Try again."); });
+  quick.value = ""; try { localStorage.removeItem(DRAFT_KEY); } catch(_){}
+  updateAddBtn();
+  toast(`Added ${plural(lines.length, "task")} to ${a ? a.name : "Inbox"}`);
+});
+
+/* ---------- routing ---------- */
+function route(){
+  const h = location.hash.slice(1);
+  S.view = VIEWS.includes(h) || /^area-[a-z0-9]+$/.test(h) ? h : "today";
+  S.open = null; S.confirmDel = null; S.renaming = false; S.confirmAreaDel = false;
+}
+addEventListener("hashchange", () => { route(); render(); const m = $("#main"); if (m) m.scrollTop = 0; });
+
+/* ---------- offline app shell ---------- */
+if ("serviceWorker" in navigator){
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(e => console.warn("Service worker not registered", e)));
+}
+</script>
+</body>
+</html>

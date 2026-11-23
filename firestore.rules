@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// Only the Google account below can read or change anything in this database.
+// Everyone else, including anyone who finds the app's address, is refused.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == "o.ghalayini98@gmail.com"
+        && request.auth.token.email_verified == true;
+    }
+
+    match /{collectionName}/{docId} {
+      allow read, write: if isOwner()
+        && collectionName in ["areas", "tasks", "notes"];
+    }
+  }
+}
